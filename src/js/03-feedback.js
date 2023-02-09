@@ -1,47 +1,39 @@
 const throttle = require('lodash.throttle');
 
-const form = document.querySelector('.feedback-form');
-const email = document.querySelector('input');
-const message = document.querySelector('textarea');
-const submitButoon = document.querySelector('button');
-const data = { email: '', message: '' };
+const formEl = document.querySelector('.feedback-form');
+const STORAGE_KEY = 'feedback-form-state';
+const formData = {};
 
-email.addEventListener('input', addData);
-message.addEventListener('input', addData);
-submitButoon.addEventListener('click', sendData);
+updateForm();
 
-checkData();
+formEl.addEventListener('input', throttle(onFormInput, 500));
+formEl.addEventListener('submit', onFormSubmit);
 
-function checkData() {
-  const localData = JSON.parse(localStorage.getItem('feedback-form-state'));
-  if (localData) {
-    email.value = localData.email;
-    message.value = localData.message;
-    data.email = localData.email;
-    data.message = localData.message;
-  }
+function onFormInput(e) {
+  formData[e.target.name] = e.target.value;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(formData));
 }
 
-const saveData = throttle(function () {
-  localStorage.setItem('feedback-form-state', JSON.stringify(data));
-}, 500);
+function onFormSubmit(e) {
+  e.preventDefault();
+  const {
+    elements: { email, message },
+  } = e.target;
 
-function addData(event) {
-  data[this.name] = event.target.value;
-  saveData();
+  if (email.value === '' || message.value === '') {
+    return window.alert('Please fill in all the fields!');
+  }
+  formEl.reset();
+  localStorage.removeItem(STORAGE_KEY);
 }
 
-function sendData(event) {
-  event.preventDefault();
-  const localData = JSON.parse(localStorage.getItem('feedback-form-state'));
-  if (!email.value || !message.value) {
-    console.log('error: not all fields are filled');
-    alert('All fields must be filled');
-  } else {
-    console.log(localData);
-    localStorage.removeItem('feedback-form-state');
-    data.email = '';
-    data.message = '';
-    form.reset();
+function updateForm() {
+  if (localStorage.getItem(STORAGE_KEY) === null) {
+    return;
   }
+  const savedForm = JSON.parse(localStorage.getItem(STORAGE_KEY));
+  Object.entries(savedForm).forEach(([name, value]) => {
+    formData[name] = value;
+    formEl.elements[name].value = value;
+  });
 }
